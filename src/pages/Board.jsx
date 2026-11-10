@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { getRole, can } from '../utils/permissions';
 import TicketModal from '../components/TicketModal';
 import Members from '../components/Members';
+import Filters from '../components/Filters';
 
 const COLS = [['todo', 'To Do'], ['inprogress', 'In Progress'], ['done', 'Done']];
 const pc = { low: 'bg-green-100 text-green-700', medium: 'bg-yellow-100 text-yellow-700', high: 'bg-red-100 text-red-700' };
@@ -19,6 +20,7 @@ export default function Board() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(undefined); // undefined = closed, null = new, object = edit
+  const [filters, setFilters] = useState({ search: '', status: '', priority: '', assignee: '', sort: 'newest' });
 
   const loadProject = useCallback(
     () => api(`/projects/${id}`).then(setProject).catch((e) => toast.error(e.message)),
@@ -26,11 +28,17 @@ export default function Board() {
   );
   useEffect(() => { setProject(null); loadProject(); }, [loadProject]);
 
-  const loadTickets = useCallback(
-    () => api(`/tickets?projectId=${id}`).then(setTickets).catch((e) => toast.error(e.message)).finally(() => setLoading(false)),
-    [id]
-  );
-  useEffect(() => { loadTickets(); }, [loadTickets]);
+  const loadTickets = useCallback(() => {
+    const p = new URLSearchParams({ projectId: id });
+    Object.entries(filters).forEach(([k, v]) => v && p.set(k, v));
+    return api(`/tickets?${p}`).then(setTickets).catch((e) => toast.error(e.message)).finally(() => setLoading(false));
+  }, [id, filters]);
+
+  // debounce so typing in search doesn't fire a request per keystroke
+  useEffect(() => {
+    const t = setTimeout(loadTickets, 250);
+    return () => clearTimeout(t);
+  }, [loadTickets]);
 
   // real-time updates
   useEffect(() => {
@@ -76,6 +84,7 @@ export default function Board() {
       </div>
 
       <Members project={project} role={role} onChange={setProject} />
+      <Filters filters={filters} setFilters={setFilters} members={project.teamMembers} />
 
       {loading ? <p>Loading tickets...</p> : (
         <DragDropContext onDragEnd={onDragEnd}>
