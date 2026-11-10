@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 
 export default function Projects() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const { refreshProjects } = useOutletContext();
   const [projects, setProjects] = useState([]);
   const [f, setF] = useState({ title: '', description: '' });
   const [loading, setLoading] = useState(true);
@@ -20,21 +21,23 @@ export default function Projects() {
       setF({ title: '', description: '' });
       toast.success('Project created');
       load();
+      refreshProjects();
     } catch (err) { toast.error(err.message); }
   };
 
   const remove = async (id) => {
-    if (!window.confirm('Delete this project?')) return;
-    try { await api(`/projects/${id}`, 'DELETE'); toast.success('Deleted'); load(); }
-    catch (err) { toast.error(err.message); }
+    if (!window.confirm('Delete this project and all its tickets?')) return;
+    try {
+      await api(`/projects/${id}`, 'DELETE');
+      toast.success('Deleted');
+      load();
+      refreshProjects();
+    } catch (err) { toast.error(err.message); }
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Projects</h1>
-        <div className="text-sm">{user.name} · <button onClick={logout} className="text-red-500">Logout</button></div>
-      </div>
+    <div className="max-w-4xl">
+      <h1 className="text-2xl font-bold mb-4">Projects</h1>
       <form onSubmit={create} className="bg-white p-4 rounded shadow mb-6 grid gap-2 md:grid-cols-3">
         <input className="input" placeholder="Title" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} required />
         <input className="input" placeholder="Description" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
