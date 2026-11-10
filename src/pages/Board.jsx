@@ -1,14 +1,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import toast from 'react-hot-toast';
 import { api } from '../api';
+import { socket } from '../socket';
 import { useAuth } from '../context/AuthContext';
 import { getRole, can } from '../utils/permissions';
 import TicketModal from '../components/TicketModal';
 import Members from '../components/Members';
 
+const COLS = [['todo', 'To Do'], ['inprogress', 'In Progress'], ['done', 'Done']];
 const pc = { low: 'bg-green-100 text-green-700', medium: 'bg-yellow-100 text-yellow-700', high: 'bg-red-100 text-red-700' };
-const sl = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
 
 export default function Board() {
   const { id } = useParams();
@@ -18,9 +20,11 @@ export default function Board() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(undefined); // undefined = closed, null = new, object = edit
 
-  useEffect(() => {
-    api(`/projects/${id}`).then(setProject).catch((e) => toast.error(e.message));
-  }, [id]);
+  const loadProject = useCallback(
+    () => api(`/projects/${id}`).then(setProject).catch((e) => toast.error(e.message)),
+    [id]
+  );
+  useEffect(() => { setProject(null); loadProject(); }, [loadProject]);
 
   const loadTickets = useCallback(
     () => api(`/tickets?projectId=${id}`).then(setTickets).catch((e) => toast.error(e.message)).finally(() => setLoading(false)),
@@ -28,11 +32,41 @@ export default function Board() {
   );
   useEffect(() => { loadTickets(); }, [loadTickets]);
 
-  if (!project) return <p className="p-6">Loading...</p>;
+  // real-time updates
+  useEffect(() => {
+    socket.auth = { token: localStorage.getItem('token') };
+    socket.connect();
+    const join = () => socket.emit('joinProject', id);
+    socket.on('connect', join);
+    if (socket.connected) join();
+    socket.on('project:changed', loadProject);
+    return () => {
+      socket.emit('leaveProject', id);
+      socket.off('connect', join);
+      socket.off('project:changed', loadProject);
+      socket.disconnect();
+    };
+  }, [id, loadProject]);
+
+  useEffect(() => {
+    socket.on('ticket:changed', loadTickets);
+    return () => socket.off('ticket:changed', loadTickets);
+  }, [loadTickets]);
+
+  const onDragEnd = async ({ destination, source, draggableId }) => {
+    if (!destination || destination.droppableId === source.droppableId) return;
+    const status = destination.droppableId;
+    setTickets((ts) => ts.map((t) => (t._id === draggableId ? { ...t, status } : t)));
+    try { await api(`/tickets/${draggableId}`, 'PUT', { status }); }
+    catch (err) { toast.error(err.message); loadTickets(); }
+  };
+
+  if (!project) return <p>Loading...</p>;
   const role = getRole(project, user.id);
+  const canEdit = can(role, 'ticket:edit');
 
   return (
-      <div>
+    <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div>
           <h1 className="text-2xl font-bold">{project.title}</h1>
@@ -43,31 +77,43 @@ export default function Board() {
 
       <Members project={project} role={role} onChange={setProject} />
 
-      {loading ? <p>Loading tickets...</p> : tickets.length === 0 ? (
-        <p className="text-gray-500">No tickets yet.</p>
-      ) : (
-        <div className="bg-white rounded shadow overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-100 text-gray-600">
-              <tr>
-                <th className="p-3">Title</th><th className="p-3">Type</th><th className="p-3">Priority</th>
-                <th className="p-3">Status</th><th className="p-3">Assignee</th><th className="p-3">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tickets.map((t) => (
-                <tr key={t._id} onClick={() => setModal(t)} className="border-t hover:bg-gray-50 cursor-pointer">
-                  <td className="p-3 font-medium">{t.title}{t.attachments?.length > 0 && <span className="ml-2 text-xs">📎 {t.attachments.length}</span>}</td>
-                  <td className="p-3 capitalize">{t.type}</td>
-                  <td className="p-3"><span className={`px-2 py-0.5 rounded text-xs ${pc[t.priority]}`}>{t.priority}</span></td>
-                  <td className="p-3">{sl[t.status]}</td>
-                  <td className="p-3">{t.assignee ? t.assignee.name : 'Unassigned'}</td>
-                  <td className="p-3">{new Date(t.createdAt).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {loading ? <p>Loading tickets...</p> : (
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="grid gap-4 md:grid-cols-3">
+            {COLS.map(([key, label]) => {
+              const list = tickets.filter((t) => t.status === key);
+              return (
+                <Droppable droppableId={key} key={key}>
+                  {(prov, snap) => (
+                    <div ref={prov.innerRef} {...prov.droppableProps}
+                      className={`rounded p-3 min-h-[200px] ${snap.isDraggingOver ? 'bg-indigo-100' : 'bg-gray-200'}`}>
+                      <h3 className="font-semibold mb-2">{label} <span className="text-gray-500">({list.length})</span></h3>
+                      {list.map((t, i) => (
+                        <Draggable key={t._id} draggableId={t._id} index={i} isDragDisabled={!canEdit}>
+                          {(p) => (
+                            <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps}
+                              onClick={() => setModal(t)} className="bg-white rounded shadow p-3 mb-2 cursor-pointer">
+                              <p className="font-medium text-sm">{t.title}</p>
+                              <div className="flex flex-wrap gap-1 mt-2 text-xs">
+                                <span className={`px-2 py-0.5 rounded ${pc[t.priority]}`}>{t.priority}</span>
+                                <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700">{t.type}</span>
+                                {t.attachments?.length > 0 && <span className="px-2 py-0.5 rounded bg-gray-100">📎 {t.attachments.length}</span>}
+                              </div>
+                              <p className="text-xs text-gray-500 mt-2">
+                                {t.assignee ? `👤 ${t.assignee.name}` : 'Unassigned'} · {new Date(t.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {prov.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              );
+            })}
+          </div>
+        </DragDropContext>
       )}
 
       {modal !== undefined && (
