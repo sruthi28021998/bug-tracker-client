@@ -2,6 +2,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { api, upload, SERVER } from '../api';
 import { can } from '../utils/permissions';
+import Comments from './Comments';
 
 export default function TicketModal({ ticket, project, role, onClose, onSaved }) {
   const isNew = !ticket;
@@ -102,6 +103,7 @@ export default function TicketModal({ ticket, project, role, onClose, onSaved })
             <button type="button" className="btn-ghost" onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</button>
           </div>
         </form>
+        {!isNew && <Comments ticketId={ticket._id} canComment={can(role, 'comment:create')} />}
       </div>
     </div>
   );
