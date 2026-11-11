@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { api, upload, SERVER } from '../api';
+import { useAuth } from '../context/AuthContext';
 import { can } from '../utils/permissions';
 import Comments from './Comments';
+import ConfirmDialog from './ConfirmDialog';
 
 export default function TicketModal({ ticket, project, role, onClose, onSaved }) {
+  const { user } = useAuth();
   const isNew = !ticket;
   const readOnly = !isNew && !can(role, 'ticket:edit');
+  const canDelete = !isNew && (can(role, 'ticket:delete:any') || (role !== 'viewer' && ticket.reporter?._id === user.id));
 
   const [f, setF] = useState({
     title: ticket?.title || '', description: ticket?.description || '',
@@ -16,6 +20,7 @@ export default function TicketModal({ ticket, project, role, onClose, onSaved })
   const [files, setFiles] = useState([]);
   const [attachments, setAttachments] = useState(ticket?.attachments || []);
   const [saving, setSaving] = useState(false);
+  const [confirm, setConfirm] = useState(false);
 
   const save = async (e) => {
     e.preventDefault();
@@ -33,6 +38,14 @@ export default function TicketModal({ ticket, project, role, onClose, onSaved })
       onSaved();
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
+  };
+
+  const del = async () => {
+    try {
+      await api(`/tickets/${ticket._id}`, 'DELETE');
+      toast.success('Ticket deleted');
+      onSaved();
+    } catch (err) { toast.error(err.message); setConfirm(false); }
   };
 
   const addFiles = async (e) => {
@@ -62,7 +75,7 @@ export default function TicketModal({ ticket, project, role, onClose, onSaved })
           <fieldset disabled={readOnly} className="space-y-2">
             <input className="input" placeholder="Title" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} required />
             <textarea className="input" rows="3" placeholder="Description" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <select className="input" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}>
                 <option value="bug">Bug</option><option value="feature">Feature</option>
               </select>
@@ -101,10 +114,18 @@ export default function TicketModal({ ticket, project, role, onClose, onSaved })
           <div className="flex gap-2 pt-3">
             {!readOnly && <button className="btn" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>}
             <button type="button" className="btn-ghost" onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</button>
+            {canDelete && (
+              <button type="button" onClick={() => setConfirm(true)} className="ml-auto text-red-600 text-sm">Delete ticket</button>
+            )}
           </div>
         </form>
+
         {!isNew && <Comments ticketId={ticket._id} canComment={can(role, 'comment:create')} />}
       </div>
+
+      {confirm && (
+        <ConfirmDialog message="Delete this ticket and its comments permanently?" onConfirm={del} onCancel={() => setConfirm(false)} />
+      )}
     </div>
   );
 }
