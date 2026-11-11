@@ -3,6 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import Spinner from '../components/Spinner';
 
 export default function Projects() {
   const { user } = useAuth();
@@ -43,7 +44,7 @@ export default function Projects() {
         <input className="input" placeholder="Description" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
         <button className="btn">Create project</button>
       </form>
-      {loading ? <p>Loading...</p> : projects.length === 0 ? <p className="text-gray-500">No projects yet.</p> : (
+        {loading ? <Spinner /> : projects.length === 0 ? <p className="text-gray-500">No projects yet.</p> : (
         <div className="grid gap-4 sm:grid-cols-2">
           {projects.map((p) => (
             <div key={p._id} className="bg-white p-4 rounded shadow">

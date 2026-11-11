@@ -9,6 +9,7 @@ import { getRole, can } from '../utils/permissions';
 import TicketModal from '../components/TicketModal';
 import Members from '../components/Members';
 import Filters from '../components/Filters';
+import Spinner from '../components/Spinner';
 
 const COLS = [['todo', 'To Do'], ['inprogress', 'In Progress'], ['done', 'Done']];
 const pc = { low: 'bg-green-100 text-green-700', medium: 'bg-yellow-100 text-yellow-700', high: 'bg-red-100 text-red-700' };
@@ -69,7 +70,7 @@ export default function Board() {
     catch (err) { toast.error(err.message); loadTickets(); }
   };
 
-  if (!project) return <p>Loading...</p>;
+  if (!project) return <Spinner />;
   const role = getRole(project, user.id);
   const canEdit = can(role, 'ticket:edit');
 
@@ -86,7 +87,7 @@ export default function Board() {
       <Members project={project} role={role} onChange={setProject} />
       <Filters filters={filters} setFilters={setFilters} members={project.teamMembers} />
 
-      {loading ? <p>Loading tickets...</p> : (
+            {loading ? <Spinner /> : (
         <DragDropContext onDragEnd={onDragEnd}>
           <div className="grid gap-4 md:grid-cols-3">
             {COLS.map(([key, label]) => {
