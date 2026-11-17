@@ -32,7 +32,7 @@ This repository is the **React frontend**. The backend is here: [bug-tracker-ser
 - [Comments](screenshots/comments.png)
 - [Filters](screenshots/filters.png)
 - [Viewer role](screenshots/viewer-role.png)
-- [Mobile view](screenshots/mobile.png)
+
 
 
 ## ✨ Features
