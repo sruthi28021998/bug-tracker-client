@@ -25,28 +25,14 @@ This repository is the **React frontend**. The backend is here: [bug-tracker-ser
 
 ## 📸 Screenshots
 
-Click any image to open it full size.
-
-### Login
-<a href="screenshots/login.png"><img src="screenshots/login.png" width="600" alt="Login page"></a>
-
-### Projects
-<a href="screenshots/projects.png"><img src="screenshots/projects.png" width="600" alt="Projects page"></a>
-
-### Kanban board
-<a href="screenshots/board.png"><img src="screenshots/board.png" width="600" alt="Kanban board"></a>
-
-### Ticket details with screenshots
-<a href="screenshots/ticket-details.png"><img src="screenshots/ticket-details.png" width="600" alt="Ticket details"></a>
-
-### Threaded comments
-<a href="screenshots/comments.png"><img src="screenshots/comments.png" width="600" alt="Threaded comments"></a>
-
-### Filters and search
-<a href="screenshots/filters.png"><img src="screenshots/filters.png" width="600" alt="Filters and search"></a>
-
-### Viewer role (read-only)
-<a href="screenshots/viewer-role.png"><img src="screenshots/viewer-role.png" width="600" alt="Viewer role"></a>
+- [Login](screenshots/login.png)
+- [Projects](screenshots/projects.png)
+- [Kanban board](screenshots/board.png)
+- [Ticket details](screenshots/ticket-details.png)
+- [Comments](screenshots/comments.png)
+- [Filters](screenshots/filters.png)
+- [Viewer role](screenshots/viewer-role.png)
+- [Mobile view](screenshots/mobile.png)
 
 
 ## ✨ Features
