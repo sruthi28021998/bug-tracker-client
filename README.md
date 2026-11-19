@@ -10,7 +10,7 @@ This repository is the **React frontend**. The backend is here: [bug-tracker-ser
 |---|---|
 | 🌐 Live app | https://bug-tracker-client-dusky.vercel.app |
 | ⚙️ API | https://bug-tracker-server-yehl.onrender.com |
-| 🎥 Demo video | <your-video-link> |
+| 🎥 Demo video | https://drive.google.com/file/d/1BnzRo1zF_-eaoUlUN_-to21xSA0XYN69/view?usp=sharing |
 | 💻 Backend repo | https://github.com/sruthi28021998/bug-tracker-server.git |
 
 > The API runs on a free Render plan and sleeps when idle, so the first request can take 30 to 60 seconds.
